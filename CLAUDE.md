@@ -1,113 +1,28 @@
-Default to using Bun instead of Node.js.
+# TS SDK: working rules
 
-- Use `bun <file>` instead of `node <file>` or `ts-node <file>`
-- Use `bun test` instead of `jest` or `vitest`
-- Use `bun check` instead of `tsc --noEmit`
-- Use `bun build <file.html|file.ts|file.css>` instead of `webpack` or `esbuild`
-- Use `bun install` instead of `npm install` or `yarn install` or `pnpm install`
-- Use `bun run <script>` instead of `npm run <script>` or `yarn run <script>` or `pnpm run <script>`
-- Use `bunx <package> <command>` instead of `npx <package> <command>`
-- Bun automatically loads .env, so don't use dotenv.
+This is a **library** (`@walon-foundation/viewer-sdk-ts`) that other projects install. It is not a Bun app.
+Spec: `../../docs/spec.md`, section 9 (SDK-01 … SDK-10 and 9.3).
 
-## APIs
+## Runtimes
+- Must run on **Node >= 20 and Bun >= 1.1**. Every feature works on both.
+- No `Bun.*` APIs and no Bun-only modules in `src/`. Use web standards (`fetch`, `Request`, `Response`,
+  `CompressionStream`) and `node:` built-ins that Bun also implements (`node:async_hooks` for `AsyncLocalStorage`).
+- `tsconfig.json` loads only Node types on purpose, so Bun-only code fails the typecheck.
 
-- `Bun.serve()` supports WebSockets, HTTPS, and routes. Don't use `express`.
-- `bun:sqlite` for SQLite. Don't use `better-sqlite3`.
-- `Bun.redis` for Redis. Don't use `ioredis`.
-- `Bun.sql` for Postgres. Don't use `pg` or `postgres.js`.
-- `WebSocket` is built-in. Don't use `ws`.
-- Prefer `Bun.file` over `node:fs`'s readFile/writeFile
-- Bun.$`ls` instead of execa.
+## Backend-agnostic
+- The core (`src/index.ts` and what it imports) never imports a web framework.
+- Request support is built in layers: `runWithRequest` (AsyncLocalStorage), then `wrapFetch` (Web `Request → Response`)
+  and `nodeMiddleware` (`req, res, next`), then optional thin adapters exported as subpaths (`/hono`, `/express`,
+  `/fastify`, `/elysia`) that list their framework as an optional peer dependency.
 
-## Testing
+## Dependencies
+- **Zero runtime dependencies.** Dev dependencies are pinned to exact versions.
 
-Use `bun test` to run tests.
+## Never break the host app
+- Logging never throws to the caller, never blocks a request, and never grows memory without bound (SDK-03, SDK-04).
 
-```ts#index.test.ts
-import { test, expect } from "bun:test";
-
-test("hello world", () => {
-  expect(1).toBe(1);
-});
-```
-
-## Type checking
-
-Use `bun check` to type check the project. It reads `tsconfig.json` and reports the same errors as `tsc`.
-
-- `bun check src/index.ts` checks one file and what it imports
-- `bun --check src/index.ts`, `bun test --check` and `bun build --check` type check first, and do nothing else if there is an error
-
-## Frontend
-
-Use HTML imports with `Bun.serve()`. Don't use `vite`. HTML imports fully support React, CSS, Tailwind.
-
-Server:
-
-```ts#index.ts
-import index from "./index.html"
-
-Bun.serve({
-  routes: {
-    "/": index,
-    "/api/users/:id": {
-      GET: (req) => {
-        return new Response(JSON.stringify({ id: req.params.id }));
-      },
-    },
-  },
-  // optional websocket support
-  websocket: {
-    open: (ws) => {
-      ws.send("Hello, world!");
-    },
-    message: (ws, message) => {
-      ws.send(message);
-    },
-    close: (ws) => {
-      // handle close
-    }
-  },
-  development: {
-    hmr: true,
-    console: true,
-  }
-})
-```
-
-HTML files can import .tsx, .jsx or .js files directly and Bun's bundler will transpile & bundle automatically. `<link>` tags can point to stylesheets and Bun's CSS bundler will bundle.
-
-```html#index.html
-<html>
-  <body>
-    <h1>Hello, world!</h1>
-    <script type="module" src="./frontend.tsx"></script>
-  </body>
-</html>
-```
-
-With the following `frontend.tsx`:
-
-```tsx#frontend.tsx
-import React from "react";
-import { createRoot } from "react-dom/client";
-
-// import .css files directly and it works
-import './index.css';
-
-const root = createRoot(document.body);
-
-export default function Frontend() {
-  return <h1>Hello, world!</h1>;
-}
-
-root.render(<Frontend />);
-```
-
-Then, run index.ts
-
-```sh
-bun --hot ./index.ts
-```
-
-For more information, read the Bun API docs in `node_modules/bun-types/docs/**.mdx`.
+## Commands (Bun is the package manager and test runner here)
+- `bun install`, `bun run typecheck`, `bun run lint`, `bun run build`, `bun test`
+- The build (tsdown) outputs ESM + CJS + `.d.ts` to `dist/`. Before a release, pack it (`bun pm pack`) and import it
+  from a scratch project with **both** `node` and `bun`, using both `import` and `require`.
+- Publish: `npm publish` (`publishConfig.access` is already `public`).
