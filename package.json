@@ -1,5 +1,5 @@
 {
-  "name": "viewer-ts-",
+  "name": "viewer-sdk-ts",
   "module": "index.ts",
   "type": "module",
   "scripts": {
