@@ -1,7 +1,8 @@
 # TS SDK: working rules
 
 This is a **library** (`@walon-foundation/viewer-sdk-ts`) that other projects install. It is not a Bun app.
-Spec: `../../docs/spec.md`, section 9 (SDK-01 … SDK-10 and 9.3).
+This repo is public. The platform spec lives in the private `viewer` repo (`docs/spec.md`, section 9: SDK-01 … SDK-10 and 9.3).
+When this repo is checked out as the `sdks/ts` submodule of `viewer`, that is `../../docs/spec.md`.
 
 ## Runtimes
 - Must run on **Node >= 20 and Bun >= 1.1**. Every feature works on both.

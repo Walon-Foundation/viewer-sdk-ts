@@ -2,11 +2,10 @@
   "name": "@walon-foundation/viewer-sdk-ts",
   "version": "0.0.0",
   "description": "Logger SDK for the Viewer logging platform (Node and Bun, any backend).",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Walon-Foundation/viewer.git",
-    "directory": "sdks/ts"
+    "url": "git+https://github.com/Walon-Foundation/viewer-sdk-ts.git"
   },
   "type": "module",
   "main": "./dist/index.cjs",
@@ -26,7 +25,8 @@
     "./package.json": "./package.json"
   },
   "files": [
-    "dist"
+    "dist",
+    "LICENSE"
   ],
   "sideEffects": false,
   "engines": {
@@ -49,5 +49,9 @@
     "@types/node": "20.19.0",
     "tsdown": "0.23.7",
     "typescript": "7.0.2"
+  },
+  "homepage": "https://github.com/Walon-Foundation/viewer-sdk-ts#readme",
+  "bugs": {
+    "url": "https://github.com/Walon-Foundation/viewer-sdk-ts/issues"
   }
 }

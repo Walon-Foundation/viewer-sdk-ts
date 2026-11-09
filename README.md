@@ -2,7 +2,7 @@
 
 Logger SDK for the Viewer logging platform. Works on Node (>= 20) and Bun, with any backend framework.
 
-> Work in progress: the API below is the planned shape (see `docs/spec.md`, section 9.3).
+> Work in progress: the API below is the planned shape.
 
 ```bash
 bun add @walon-foundation/viewer-sdk-ts   # or: npm i @walon-foundation/viewer-sdk-ts
@@ -24,3 +24,7 @@ bun run lint
 bun run build   # ESM + CJS + types into dist/
 bun test
 ```
+
+## License
+
+MIT
