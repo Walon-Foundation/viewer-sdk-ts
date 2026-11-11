@@ -1,5 +1,13 @@
 import { type ConsoleWriter, consoleWriter } from "./console";
+import { type RequestMeta, requestStore, scopeFor } from "./context";
 import { LEVELS, type LevelName } from "./level";
+import {
+  type FetchOptions,
+  type MiddlewareOptions,
+  type NodeMiddleware,
+  nodeMiddleware,
+  wrapFetch,
+} from "./middleware";
 import {
   type LoggerOptions,
   remote,
@@ -31,8 +39,10 @@ export class Core {
   logged = 0;
   #shutdown: Promise<FlushResult> | undefined;
   #unhook: () => void = () => {};
-  /** Supplies the current request's scope; replaced in step 7.3. */
-  scope: () => RequestScope | undefined = () => undefined;
+  /** The request the current async context belongs to, if any. */
+  scope(): RequestScope | undefined {
+    return requestStore.getStore();
+  }
 
   constructor(settings: Settings) {
     this.settings = settings;
@@ -172,6 +182,38 @@ export class Logger {
   /** child returns a logger that adds attrs to every record (spec SDK-02). */
   child(attrs: Attributes): Logger {
     return new Logger(this.#core, { ...this.#attrs, ...asAttrs(attrs) });
+  }
+
+  /**
+   * runWithRequest runs fn as a request: every record logged inside it, by any logger and
+   * however deep, carries request_id and the trace ids (spec SDK-10).
+   */
+  runWithRequest<T>(meta: RequestMeta, fn: () => T): T {
+    return requestStore.run(scopeFor(meta), fn);
+  }
+
+  /**
+   * current is this logger. Inside a request every log call already carries the request,
+   * so there is no separate request logger to fetch; it exists for code that expects one.
+   */
+  current(): Logger {
+    return this;
+  }
+
+  /** wrapFetch wraps a (Request) => Response handler with request logging. */
+  wrapFetch<A extends unknown[]>(
+    handler: (req: Request, ...rest: A) => Response | Promise<Response>,
+    options?: FetchOptions,
+  ): (req: Request, ...rest: A) => Promise<Response> {
+    return wrapFetch(this, handler, options) as (
+      req: Request,
+      ...rest: A
+    ) => Promise<Response>;
+  }
+
+  /** nodeMiddleware is (req, res, next) request logging for Express, Connect or node:http. */
+  nodeMiddleware(options?: MiddlewareOptions): NodeMiddleware {
+    return nodeMiddleware(this, options);
   }
 
   /** flush sends what is queued, waiting at most timeoutMs (default 5 s). It never rejects. */
