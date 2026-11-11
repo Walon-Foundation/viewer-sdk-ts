@@ -1,11 +1,24 @@
 {
   "name": "@walon-foundation/viewer-sdk-ts",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Logger SDK for the Viewer logging platform (Node and Bun, any backend).",
+  "keywords": [
+    "logging",
+    "logger",
+    "opentelemetry",
+    "otlp",
+    "viewer",
+    "node",
+    "bun"
+  ],
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Walon-Foundation/viewer-sdk-ts.git"
+  },
+  "homepage": "https://github.com/Walon-Foundation/viewer-sdk-ts#readme",
+  "bugs": {
+    "url": "https://github.com/Walon-Foundation/viewer-sdk-ts/issues"
   },
   "type": "module",
   "main": "./dist/index.cjs",
@@ -24,6 +37,12 @@
     },
     "./package.json": "./package.json"
   },
+  "imports": {
+    "#sdk": {
+      "bun": "./src/index.ts",
+      "default": "./dist/index.js"
+    }
+  },
   "files": [
     "dist",
     "LICENSE"
@@ -41,17 +60,14 @@
     "typecheck": "tsc --noEmit",
     "lint": "biome check",
     "format": "biome format --write",
-    "test": "bun test",
-    "prepublishOnly": "bun run typecheck && bun run lint && bun run build"
+    "test": "bun test test/",
+    "prepublishOnly": "bun run typecheck && bun run lint && bun run build",
+    "test:node": "tsdown && node --test test/"
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.2",
     "@types/node": "20.19.0",
     "tsdown": "0.23.7",
     "typescript": "7.0.2"
-  },
-  "homepage": "https://github.com/Walon-Foundation/viewer-sdk-ts#readme",
-  "bugs": {
-    "url": "https://github.com/Walon-Foundation/viewer-sdk-ts/issues"
   }
 }
