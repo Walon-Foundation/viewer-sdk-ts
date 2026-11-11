@@ -41,6 +41,10 @@
     "#sdk": {
       "bun": "./src/index.ts",
       "default": "./dist/index.js"
+    },
+    "#internal": {
+      "bun": "./src/internal.ts",
+      "default": "./dist/internal.js"
     }
   },
   "files": [
