@@ -18,14 +18,15 @@ jobs:
       - run: bun run lint
       - run: bun run typecheck
       - run: bun run build
+      - run: bun run size
 
   bun:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
-      # No install: under Bun the tests import src/, which needs only built-ins, and an
-      # older Bun can't read the lockfile a newer one wrote.
+      # The adapter tests need the frameworks.
+      - run: bun install --frozen-lockfile
       - run: bun test test/
 
   # Older Bun runs the SDK, but its node:test is missing (1.1) or partial (1.2), so it
