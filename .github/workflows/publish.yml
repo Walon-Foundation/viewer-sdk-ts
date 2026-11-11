@@ -22,7 +22,7 @@ jobs:
           registry-url: "https://registry.npmjs.org"
       - run: bun install --frozen-lockfile
       - name: The tag matches package.json
-        run: test "v$(node -p 'require(\"./package.json\").version')" = "${GITHUB_REF_NAME}"
+        run: test "v$(node -p "require('./package.json').version")" = "${GITHUB_REF_NAME}"
       - run: bun run lint && bun run typecheck && bun test test/
       - run: bun --bun run build
       - run: bash scripts/pack-check.sh

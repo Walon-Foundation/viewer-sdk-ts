@@ -5,7 +5,12 @@ import { createServer } from "node:http";
 import { createLogger } from "#sdk";
 
 const mode = process.argv[2];
-const log = createLogger({ service: "billing", env: "prod", console: false, level: "debug" });
+const log = createLogger({
+  service: "billing",
+  env: "prod",
+  console: false,
+  level: "debug",
+});
 const out = {};
 
 if (mode === "records") {
@@ -28,7 +33,9 @@ if (mode === "records") {
   const res = await fetchHandler(
     new Request("http://app.test/invoices/inv_7/pay", {
       method: "POST",
-      headers: { traceparent: "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01" },
+      headers: {
+        traceparent: "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
+      },
     }),
   );
   out.fetchRequestId = res.headers.get("x-request-id");
