@@ -122,8 +122,8 @@
     "format": "biome format --write",
     "test": "bun test test/",
     "prepublishOnly": "bun run typecheck && bun run lint && bun run build",
-    "test:node": "tsdown && node --test test/*.test.mjs",
-    "size": "tsdown && bun scripts/size.mjs"
+    "test:node": "bun --bun tsdown && node --test test/*.test.mjs",
+    "size": "bun --bun tsdown && bun scripts/size.mjs"
   },
   "peerDependencies": {
     "elysia": ">=1.2",
