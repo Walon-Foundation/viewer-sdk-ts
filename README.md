@@ -4,8 +4,8 @@ The logger for the Viewer logging platform, for **Node ≥ 20 and Bun ≥ 1.1**,
 runtime dependencies**. It writes structured logs to the console and sends them to Viewer
 over OTLP/HTTP, and it works with any backend framework.
 
-> Work in progress: the logger, its settings and the console output are in. Sending to
-> Viewer, request context and the framework adapters follow.
+> Work in progress: the logger, the console and sending to Viewer are in. Request context
+> and the framework adapters follow.
 
 ```bash
 bun add @walon-foundation/viewer-sdk-ts   # or: npm i @walon-foundation/viewer-sdk-ts
@@ -19,6 +19,7 @@ const log = createLogger({ service: "billing", env: "prod" }); // the rest from 
 log.info("invoice created", { invoiceId, amount: 4200 });
 log.error("payment failed", { err });
 log.child({ userId }).warn("retrying");
+await log.shutdown(); // sends what is queued, waiting at most 5 s
 ```
 
 ## Settings
@@ -44,5 +45,23 @@ development and tests. If only one of the two is set, it says so once on stderr.
   `exception.stacktrace` and a short `exception.cause` chain.
 - **`fatal` does not exit.** It records the log at the fatal level; your program decides
   what happens next.
+
+## Sending
+
+Records go into a bounded queue (10 000) and are sent in batches of up to 500, or every
+second, as OTLP/HTTP JSON with gzip. Failures are retried with backoff (at most five tries,
+honouring `Retry-After`). When the queue is full the oldest record is dropped. Nothing is
+lost silently: `log.stats()` counts every drop, and the next batch that gets through carries
+a warning saying how many were dropped.
+
+`await log.flush()` sends what is queued; `await log.shutdown()` does that and stops. Both
+wait at most five seconds by default and never reject: they resolve with what was left.
+
+The timer is `unref`'d, so it never keeps your process alive. When the event loop empties
+(`beforeExit`), queued records are flushed. The SDK adds no `SIGINT`/`SIGTERM` listener
+unless you pass `handleSignals: true`; then it flushes and lets the signal end the process as
+it would have. Otherwise call `await log.shutdown()` in your own shutdown code.
+
+`exporter: { export(records) }` replaces HTTP with your own sink.
 
 Licensed under MIT.
