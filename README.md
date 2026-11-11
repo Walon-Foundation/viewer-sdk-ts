@@ -4,8 +4,6 @@ The logger for the Viewer logging platform, for **Node ≥ 20 and Bun ≥ 1.1**,
 runtime dependencies**. It writes structured logs to the console and sends them to Viewer
 over OTLP/HTTP, and it works with any backend framework.
 
-> Work in progress: the framework adapters (Hono, Express, Fastify, Elysia) follow.
-
 ```bash
 bun add @walon-foundation/viewer-sdk-ts   # or: npm i @walon-foundation/viewer-sdk-ts
 ```
@@ -68,6 +66,26 @@ Each request:
 - writes one access log: method, route or path, status, `duration_ms`, client address and
   user agent. 5xx logs at `error`, 4xx at `warn`, the rest at `info`. A thrown handler is
   logged as a 500 and thrown again; an aborted request is logged as 499.
+
+3. **Thin adapters**, each a few lines on top of the above. The framework is an optional peer
+   dependency: nothing is installed unless you use it.
+
+```ts
+import { viewerMiddleware } from "@walon-foundation/viewer-sdk-ts/hono";
+app.use(viewerMiddleware(log)); // Hono
+
+import { viewerErrorHandler, viewerMiddleware } from "@walon-foundation/viewer-sdk-ts/express";
+app.use(viewerMiddleware(log)); // first
+app.use(viewerErrorHandler(log)); // last: logs the error inside its request, then passes it on
+
+import { viewerPlugin } from "@walon-foundation/viewer-sdk-ts/fastify";
+await app.register(viewerPlugin, { log });
+
+import { viewerPlugin } from "@walon-foundation/viewer-sdk-ts/elysia";
+new Elysia().use(viewerPlugin(log)); // tested with Elysia 1.4
+```
+
+The adapters also log the matched route pattern (`/invoices/:id`), not just the path.
 
 Bodies are never buffered, so streaming responses stream. `trustProxy: true` reads the
 client address from `X-Forwarded-For`; turn it on only behind a proxy that sets it.
