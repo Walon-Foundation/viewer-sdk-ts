@@ -4,8 +4,7 @@ The logger for the Viewer logging platform, for **Node ≥ 20 and Bun ≥ 1.1**,
 runtime dependencies**. It writes structured logs to the console and sends them to Viewer
 over OTLP/HTTP, and it works with any backend framework.
 
-> Work in progress: the logger, the console and sending to Viewer are in. Request context
-> and the framework adapters follow.
+> Work in progress: the framework adapters (Hono, Express, Fastify, Elysia) follow.
 
 ```bash
 bun add @walon-foundation/viewer-sdk-ts   # or: npm i @walon-foundation/viewer-sdk-ts
@@ -45,6 +44,33 @@ development and tests. If only one of the two is set, it says so once on stderr.
   `exception.stacktrace` and a short `exception.cause` chain.
 - **`fatal` does not exit.** It records the log at the fatal level; your program decides
   what happens next.
+
+## Requests
+
+Request support works with any backend, in layers:
+
+1. **Context, anywhere.** `log.runWithRequest(meta, fn)` runs `fn` as a request. Every log
+   call inside it, by any logger and however deep, carries `request_id` and the trace ids.
+2. **Two middleware shapes** that cover nearly every server:
+   - `log.wrapFetch(handler)` for web-standard `(Request) => Response` handlers: Bun.serve,
+     Hono, Elysia, Next.js route handlers;
+   - `log.nodeMiddleware()` for `(req, res, next)`: Express, Connect, Fastify through middie,
+     raw `node:http`.
+
+```ts
+Bun.serve({ fetch: log.wrapFetch((req) => new Response("ok")) });
+app.use(log.nodeMiddleware({ skipPaths: ["/healthz"] }));
+```
+
+Each request:
+- reads `X-Request-ID` or makes one, and echoes it on the response;
+- reads a W3C `traceparent` header for the trace and span ids;
+- writes one access log: method, route or path, status, `duration_ms`, client address and
+  user agent. 5xx logs at `error`, 4xx at `warn`, the rest at `info`. A thrown handler is
+  logged as a 500 and thrown again; an aborted request is logged as 499.
+
+Bodies are never buffered, so streaming responses stream. `trustProxy: true` reads the
+client address from `X-Forwarded-For`; turn it on only behind a proxy that sets it.
 
 ## Sending
 

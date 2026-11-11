@@ -8,6 +8,16 @@ import { encodeRecord, rejectedIn, retryAfterMs, rfc3339 } from "#internal";
 import { createLogger } from "#sdk";
 import { stderrLines } from "./helpers.mjs";
 
+// Servers started by the tests, closed once at the end (Bun 1.2's node:test doesn't allow
+// after() inside a test).
+const servers = [];
+after(() => {
+  for (const s of servers) {
+    s.closeAllConnections?.();
+    s.close();
+  }
+});
+
 /** A fake Viewer: records each request and answers with the next queued response. */
 async function fakeServer(answers = []) {
   const reqs = [];
@@ -27,10 +37,7 @@ async function fakeServer(answers = []) {
   });
   await new Promise((r) => server.listen(0, "127.0.0.1", r));
   const url = `http://127.0.0.1:${server.address().port}`;
-  after(() => {
-    server.closeAllConnections?.();
-    server.close();
-  });
+  servers.push(server);
   const records = () =>
     reqs.flatMap((q) => q.body.resourceLogs[0].scopeLogs[0].logRecords);
   return { url, reqs, records, server };
