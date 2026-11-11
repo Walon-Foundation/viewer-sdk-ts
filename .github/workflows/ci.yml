@@ -24,8 +24,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
-      # No install: under Bun the tests import src/, which needs only built-ins, and an
-      # older Bun can't read the lockfile a newer one wrote.
+      - run: bun install --frozen-lockfile
       - run: bun test test/
 
   # Older Bun runs the SDK, but its node:test is missing (1.1) or partial (1.2), so it
@@ -54,7 +53,8 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
       - run: bun install --frozen-lockfile
-      - run: bun run build
+      # Built with Bun's runtime: Node 20 can't load the TypeScript build config.
+      - run: bun --bun run build
       # Under Node the tests import the built dist/ (the "#sdk" import in package.json).
       - run: node --test test/*.test.mjs
       - run: node test/smoke.mjs
