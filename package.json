@@ -105,6 +105,7 @@
   },
   "files": [
     "dist",
+    "!dist/internal.*",
     "LICENSE"
   ],
   "sideEffects": false,
@@ -121,9 +122,10 @@
     "lint": "biome check",
     "format": "biome format --write",
     "test": "bun test test/",
-    "prepublishOnly": "bun run typecheck && bun run lint && bun run build",
+    "prepublishOnly": "bun run typecheck && bun run lint && bun --bun tsdown",
     "test:node": "bun --bun tsdown && node --test test/*.test.mjs",
-    "size": "bun --bun tsdown && bun scripts/size.mjs"
+    "size": "bun --bun tsdown && bun scripts/size.mjs",
+    "pack:check": "bash scripts/pack-check.sh"
   },
   "peerDependencies": {
     "elysia": ">=1.2",
