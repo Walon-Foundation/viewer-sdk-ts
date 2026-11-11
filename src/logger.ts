@@ -1,12 +1,20 @@
 import { type ConsoleWriter, consoleWriter } from "./console";
 import { LEVELS, type LevelName } from "./level";
-import { type LoggerOptions, resolveOptions, type Settings } from "./options";
+import {
+  type LoggerOptions,
+  remote,
+  resolveOptions,
+  type Settings,
+} from "./options";
 import {
   type Attributes,
   type LogRecord,
   nowNanos,
   withException,
 } from "./record";
+import { type FlushResult, type Stats, Transport } from "./transport";
+
+export const SDK_VERSION = "0.1.0";
 
 /** What a request adds to every record logged inside it (set by runWithRequest). */
 export interface RequestScope {
@@ -19,16 +27,97 @@ export interface RequestScope {
 export class Core {
   readonly settings: Settings;
   readonly console: ConsoleWriter | undefined;
-  /** Hands a record on to the transport; replaced in step 7.2. */
-  ship: (r: LogRecord) => void = () => {};
+  readonly transport: Transport | undefined;
   logged = 0;
+  #shutdown: Promise<FlushResult> | undefined;
+  #unhook: () => void = () => {};
   /** Supplies the current request's scope; replaced in step 7.3. */
   scope: () => RequestScope | undefined = () => undefined;
 
   constructor(settings: Settings) {
     this.settings = settings;
     this.console = consoleWriter(settings);
+    if (remote(settings)) {
+      this.transport = new Transport(settings, SDK_VERSION, stderr);
+      this.#unhook = hookExit(this);
+    }
   }
+
+  ship(r: LogRecord): void {
+    this.transport?.push(r);
+  }
+
+  flush(timeoutMs?: number): Promise<FlushResult> {
+    if (!this.transport || this.#shutdown)
+      return Promise.resolve({ unsent: 0, timedOut: false });
+    return this.transport.flush(timeoutMs);
+  }
+
+  shutdown(timeoutMs?: number): Promise<FlushResult> {
+    if (!this.#shutdown) {
+      this.#unhook();
+      this.#shutdown = this.transport
+        ? this.transport.shutdown(timeoutMs)
+        : Promise.resolve({ unsent: 0, timedOut: false });
+    }
+    return this.#shutdown as Promise<FlushResult>;
+  }
+
+  stats(): Stats {
+    const t = this.transport;
+    return {
+      logged: this.logged,
+      queued: t?.queued ?? 0,
+      sent: t?.stats.sent ?? 0,
+      queueFull: t?.stats.queueFull ?? 0,
+      rejected: t?.stats.rejected ?? 0,
+      failed: t?.stats.failed ?? 0,
+      afterShutdown: t?.stats.afterShutdown ?? 0,
+    };
+  }
+}
+
+type Proc = {
+  on(e: string, f: (...a: unknown[]) => void): unknown;
+  removeListener(e: string, f: (...a: unknown[]) => void): unknown;
+  kill(pid: number, sig: string): unknown;
+  pid: number;
+};
+
+/**
+ * hookExit flushes when the event loop runs dry (beforeExit), and says on stderr what was
+ * still unsent at exit, which can't wait. Signals are hooked only with handleSignals: a
+ * SIGTERM listener stops Node exiting on SIGTERM, so the SDK re-sends the signal after
+ * flushing, and the default behaviour happens as before.
+ */
+function hookExit(core: Core): () => void {
+  const p = (globalThis as { process?: Proc }).process;
+  if (!p?.on) return () => {};
+  const beforeExit = () => {
+    if ((core.transport?.queued ?? 0) > 0) void core.flush();
+  };
+  const onExit = () => {
+    const n = core.transport?.queued ?? 0;
+    if (n > 0)
+      stderr(
+        `viewer: ${n} log records were not sent before exit; call shutdown() first`,
+      );
+  };
+  const signals = core.settings.handleSignals ? ["SIGINT", "SIGTERM"] : [];
+  const onSignal = (sig: unknown) => {
+    void core.shutdown().finally(() => {
+      for (const s of signals) p.removeListener(s, onSignal);
+      p.kill(p.pid, String(sig));
+    });
+  };
+  p.on("beforeExit", beforeExit);
+  p.on("exit", onExit);
+  for (const s of signals) p.on(s, onSignal);
+  return () => {
+    p.removeListener("beforeExit", beforeExit);
+    p.removeListener("exit", onExit);
+    for (const s of signals) p.removeListener(s, onSignal);
+  };
 }
 
 let warnedPanic = false;
@@ -83,6 +172,21 @@ export class Logger {
   /** child returns a logger that adds attrs to every record (spec SDK-02). */
   child(attrs: Attributes): Logger {
     return new Logger(this.#core, { ...this.#attrs, ...asAttrs(attrs) });
+  }
+
+  /** flush sends what is queued, waiting at most timeoutMs (default 5 s). It never rejects. */
+  flush(timeoutMs?: number): Promise<FlushResult> {
+    return this.#core.flush(timeoutMs);
+  }
+
+  /** shutdown flushes and stops sending; later calls reach the console only. Safe to call twice. */
+  shutdown(timeoutMs?: number): Promise<FlushResult> {
+    return this.#core.shutdown(timeoutMs);
+  }
+
+  /** stats reports what has happened to records so far. */
+  stats(): Stats {
+    return this.#core.stats();
   }
 
   isEnabled(level: LevelName): boolean {
