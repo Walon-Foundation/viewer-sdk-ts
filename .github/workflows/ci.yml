@@ -59,3 +59,16 @@ jobs:
       # Under Node the tests import the built dist/ (the "#sdk" import in package.json).
       - run: node --test test/*.test.mjs
       - run: node test/smoke.mjs
+
+  # T4: the packed tarball, installed in scratch Node and Bun projects, through import and
+  # require, with the types checked.
+  pack:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: bun install --frozen-lockfile
+      - run: bash scripts/pack-check.sh

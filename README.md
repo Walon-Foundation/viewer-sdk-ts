@@ -108,4 +108,11 @@ it would have. Otherwise call `await log.shutdown()` in your own shutdown code.
 
 `exporter: { export(records) }` replaces HTTP with your own sink.
 
+## Tested
+
+The same test suite runs on Node 20, 22 and 24 and on current Bun; Bun 1.1 and 1.2 run a
+smoke test. Each adapter is tested against its real framework. Every release is packed and
+installed into fresh Node and Bun projects, through both `import` and `require`, before it
+is published. The core is about 6 kB minified and gzipped; each adapter is under 1 kB.
+
 Licensed under MIT.
