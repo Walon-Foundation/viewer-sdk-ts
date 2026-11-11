@@ -26,4 +26,4 @@ When this repo is checked out as the `sdks/ts` submodule of `viewer`, that is `.
 - `bun install`, `bun run typecheck`, `bun run lint`, `bun run build`, `bun test`
 - The build (tsdown) outputs ESM + CJS + `.d.ts` to `dist/`. Before a release, pack it (`bun pm pack`) and import it
   from a scratch project with **both** `node` and `bun`, using both `import` and `require`.
-- Publish: `npm publish` (`publishConfig.access` is already `public`).
+- Publish: by hand, from the maintainer's own terminal, never from CI or an agent. See "Releasing" in the README.

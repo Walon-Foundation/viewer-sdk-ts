@@ -115,4 +115,16 @@ smoke test. Each adapter is tested against its real framework. Every release is 
 installed into fresh Node and Bun projects, through both `import` and `require`, before it
 is published. The core is about 6 kB minified and gzipped; each adapter is under 1 kB.
 
+## Releasing (maintainers)
+
+Releases are published by hand, so npm's two-factor approval stays with a person.
+
+1. Bump `version` in `package.json` (npm never takes the same version twice) and merge to `main`.
+2. Tag it: `git tag -a vX.Y.Z -m "vX.Y.Z" && git push origin vX.Y.Z`. The `release-check`
+   workflow runs lint, typecheck, the tests, the build and the pack check on the tag.
+3. When it passes, publish from your own terminal (not an agent or CI):
+   `npm publish --access public`, then approve in the browser when npm asks.
+   `prepublishOnly` typechecks, lints and builds first.
+4. Check it: `npm view @walon-foundation/viewer-sdk-ts version`.
+
 Licensed under MIT.
