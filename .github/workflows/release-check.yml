@@ -1,17 +1,17 @@
-name: publish
+name: release-check
 
-# Publishes to npm when a vX.Y.Z tag is pushed. Needs the NPM_TOKEN secret, an automation
-# token for the walon-foundation npm organization.
+# Releases are published by hand from the maintainer's laptop (npm publish, with npm's
+# two-factor approval). On a vX.Y.Z tag this checks that the tagged code is releasable;
+# it never publishes.
 on:
   push:
     tags: ["v*.*.*"]
 
 permissions:
   contents: read
-  id-token: write # npm provenance
 
 jobs:
-  publish:
+  check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -19,13 +19,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-          registry-url: "https://registry.npmjs.org"
       - run: bun install --frozen-lockfile
       - name: The tag matches package.json
         run: test "v$(node -p "require('./package.json').version")" = "${GITHUB_REF_NAME}"
       - run: bun run lint && bun run typecheck && bun test test/
       - run: bun --bun run build
       - run: bash scripts/pack-check.sh
-      - run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
