@@ -48,8 +48,15 @@ export function writeAccess(
   );
 }
 
-const firstForwarded = (xff: string | null | undefined): string | undefined =>
-  xff?.split(",")[0]?.trim() || undefined;
+export const firstForwarded = (
+  xff: string | null | undefined,
+): string | undefined => xff?.split(",")[0]?.trim() || undefined;
+
+// Each request's scope, for code that sees the request but not the async context it began
+// in, such as an Express error handler.
+const scopes = new WeakMap<object, RequestScope>();
+export const scopeOfRequest = (req: object): RequestScope | undefined =>
+  scopes.get(req);
 
 type FetchHandler<A extends unknown[]> = (
   req: Request,
